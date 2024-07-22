@@ -8,6 +8,8 @@ const CalorieCalculator: React.FC = () => {
   const [height, setHeight] = useState<number>(0);
   const [system, setSystem] = useState<string>('Decimal');
   const [calories, setCalories] = useState<number>(0);
+  const [warnings, setWarnings] = useState<{ [key: string]: string }>({});
+  const [isValid, setIsValid] = useState<boolean>(false);
 
   const [labels, setLabels] = useState({
     weightLabel: 'Peso (kg): ',
@@ -21,13 +23,13 @@ const CalorieCalculator: React.FC = () => {
   });
 
   useEffect(() => {
-    if (age > 0 && weight > 0 && height > 0) {
+    if (isValid) {
       const calculatedCalories = calculateCalories(age, weight, height, system);
       setCalories(calculatedCalories);
     } else {
       setCalories(0);
     }
-  }, [age, weight, height, system]);
+  }, [age, weight, height, system, isValid]);
 
   const handleSystemChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newSystem = e.target.value;
@@ -36,6 +38,8 @@ const CalorieCalculator: React.FC = () => {
     setWeight(0);
     setHeight(0);
     setCalories(0);
+    setWarnings({});
+    setIsValid(false);
     if (newSystem === 'Imperial') {
       setLabels({
         weightLabel: 'Peso (lbs): ',
@@ -60,17 +64,54 @@ const CalorieCalculator: React.FC = () => {
       });
     }
   };
+
+  const validateAndSet = (value: number, setter: React.Dispatch<React.SetStateAction<number>>, min: number, max: number, fieldName: string) => {
+    if (value < min || value > max) {
+      setWarnings(prevWarnings => ({...prevWarnings, [fieldName]: `El valor de ${fieldName} debe estar entre ${min} y ${max}.`}));
+      setIsValid(false);
+    } else {
+      setWarnings(prevWarnings => {
+        const newWarnings = { ...prevWarnings };
+        delete newWarnings[fieldName];
+        return newWarnings;
+      });
+      setter(value);
+      setIsValid(true);
+    }
+  };
+
+  const handleAgeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setAge(value);
+    validateAndSet(value, setAge, 16, 105, 'Edad');
+  };
+
+  const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setWeight(value);
+    validateAndSet(value, setWeight, limits.weightMin, limits.weightMax, 'Peso');
+  };
+
+  const handleHeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setHeight(value);
+    validateAndSet(value, setHeight, limits.heightMin, limits.heightMax, 'Altura');
+  };
+
   return (
     <div>
       <h1>Calculadora de calorías</h1>
       <form>
         <p>Por favor, seleccione el sistema métrico:</p>
         <FormField label="Sistema métrico: " type="select" value={system} onChange={handleSystemChange} options={['Decimal', 'Imperial']} />
-        <FormField label="Edad: " type="number" value={age} onChange={(e) => setAge(Number(e.target.value))} min={16} max={105} step={1} />
-        <FormField label={labels.weightLabel} type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value))} min={limits.weightMin} max={limits.weightMax} step={0.01} />
-        <FormField label={labels.heightLabel} type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} min={limits.heightMin} max={limits.heightMax} step={0.1} />
+        <FormField label="Edad: " type="number" value={age} onChange={handleAgeChange} min={16} max={105} step={1} />
+        {warnings['Edad'] && <p style={{ color: 'red' }}>{warnings['Edad']}</p>}
+        <FormField label={labels.weightLabel} type="number" value={weight} onChange={handleWeightChange} min={limits.weightMin} max={limits.weightMax} step={0.01} />
+        {warnings['Peso'] && <p style={{ color: 'red' }}>{warnings['Peso']}</p>}
+        <FormField label={labels.heightLabel} type="number" value={height} onChange={handleHeightChange} min={limits.heightMin} max={limits.heightMax} step={0.1} />
+        {warnings['Altura'] && <p style={{ color: 'red' }}>{warnings['Altura']}</p>}
       </form>
-      <h2>Calorías Diarias: {calories} kcal</h2>
+      <h2>Calorías a consumir diariamente: {calories} kcal</h2>
     </div>
   );
 };

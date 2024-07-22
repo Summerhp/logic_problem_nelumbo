@@ -24,7 +24,7 @@ const FormField: React.FC<FormFieldProps> = ({ label, type, value, onChange, opt
           ))}
         </select>
       ) : (
-        <input type={type} value={value} onChange={onChange} {...(type === 'number' && { min, max, step })} />
+        <input type={type} value={value} onChange={onChange} min={min} max={max} step={step} />
       )}
     </div>
   );
